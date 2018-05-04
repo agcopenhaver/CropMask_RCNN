@@ -1,5 +1,6 @@
 #other files and folders
 models/mask_rcnn_coco.h5
+notebooks/notebook.tex
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
