@@ -1,0 +1,18 @@
+language: python
+python:
+    - "3.6"
+before_script:
+    - pip install python-coveralls
+install: 
+    - "pip install -r requirements_dev.txt"
+    - "python setup.py install"
+script: 
+    - coverage run --source daemon -m py.test 
+    - docker build . -t proj 
+    - docker run proj python /code/tests/test_daemon.py 
+    - flake8 --exit-zero
+after_success:
+    - coverage report
+    - coveralls
+services:
+    - docker
