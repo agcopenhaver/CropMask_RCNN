@@ -1,7 +1,16 @@
-deeplearn_imagery
+maskrcnn_agriculture
 ==============================
 
-Applying DL models for classification and segmentation. Follows Deep Learning with Python by Francois Chollet pretty closely
+Applying DL models for classification and segmentation. Follows the nucleus example in 
+https://github.com/agroimpacts/Mask_RCNN pretty closely.
+
+Installation:
+1. Create a conda environment for this repo. You can call it "maskrcnn"
+2. Go to this repo and install MaskRCNN in the conda environment https://github.com/agroimpacts/Mask_RCNN
+3. Run `pip install -r requirements.txt` from the root of this directory while your environment is active.
+4. Email/Slack Ryan with any questions, ravery@ucsb.edu
+
+This environment will also allow you to interact with the demos in https://github.com/agroimpacts/Mask_RCNN
 
 Project Organization
 ------------
@@ -14,7 +23,7 @@ Project Organization
     │   ├── interim        <- Intermediate data that has been transformed.
     │   ├── processed      <- The final, canonical data sets for modeling.
     │   └── raw            <- The original, immutable data dump.
-    │
+    ├── daemon             <- Flask app for receiving new HITs
     ├── docs               <- A default Sphinx project; see sphinx-doc.org for details
     │
     ├── models             <- Trained and serialized models, model predictions, or model summaries
