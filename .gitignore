@@ -1,7 +1,7 @@
 #other files and folders
 models/mask_rcnn_coco.h5
 notebooks/notebook.tex
-
+.Rhistory/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
