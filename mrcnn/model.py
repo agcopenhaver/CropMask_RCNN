@@ -1848,7 +1848,7 @@ class MaskRCNN():
 
         # Inputs
         input_image = KL.Input(
-            shape=[None, None, 3], name="input_image")
+            shape=[None, None, config.CHANNELS_NUM], name="input_image")
         input_image_meta = KL.Input(shape=[config.IMAGE_META_SIZE],
                                     name="input_image_meta")
         if mode == "training":
@@ -2094,7 +2094,7 @@ class MaskRCNN():
         exlude: list of layer names to excluce
         """
         import h5py
-        from keras.engine import topology
+        from keras.engine import saving
 
         if exclude:
             by_name = True
@@ -2116,9 +2116,9 @@ class MaskRCNN():
             layers = filter(lambda l: l.name not in exclude, layers)
 
         if by_name:
-            topology.load_weights_from_hdf5_group_by_name(f, layers)
+            saving.load_weights_from_hdf5_group_by_name(f, layers)
         else:
-            topology.load_weights_from_hdf5_group(f, layers)
+            saving.load_weights_from_hdf5_group(f, layers)
         if hasattr(f, 'close'):
             f.close()
 

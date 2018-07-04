@@ -1,5 +1,5 @@
 #other files and folders
-models/mask_rcnn_coco.h5
+models/
 notebooks/notebook.tex
 .Rhistory/
 # Byte-compiled / optimized / DLL files
