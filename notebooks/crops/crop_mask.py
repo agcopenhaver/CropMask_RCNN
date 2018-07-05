@@ -22,6 +22,10 @@ Usage: import the module (see Jupyter notebooks for examples), or run from
     python3 crop_mask.py detect --dataset=data/raw/wv2 --subset=train --weights=<last or /path/to/weights.h5>
 """
 
+
+############################################################
+#  Pre-processing and train/test split
+############################################################
 # Set matplotlib backend
 # This has to be done before other importa that might
 # set it, but only if we're running in script mode
@@ -31,47 +35,19 @@ if __name__ == '__main__':
     # Agg backend runs without a display
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
-
+    
+import random
 import os
 import sys
-import json
-import datetime
-import numpy as np
-import skimage.io
-from imgaug import augmenters as iaa
-
-# Root directory of the project
-ROOT_DIR = os.path.abspath("../../")
-
-# Import Mask RCNN
-sys.path.append(ROOT_DIR)  # To find local version of the library
-from mrcnn.config import Config
-from mrcnn import utils
-from mrcnn import model as modellib
-from mrcnn import visualize
-
-# Path to trained weights file
-COCO_WEIGHTS_PATH = os.path.join(ROOT_DIR, "models/mask_rcnn_coco.h5")
-
-# Directory to save logs and model checkpoints, if not provided
-# through the command line argument --logs
-DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
-
-# Results directory
-# Save submission files here
-RESULTS_DIR = os.path.join(ROOT_DIR, "results/wv2/")
-
-############################################################
-#  Pre-processing and train/test split
-############################################################
-
-import random
 import shutil
 import copy
 from skimage import measure
 from skimage import morphology as skim
-random.seed(4)
+import skimage.io as skio
+import warnings
 
+# Root directory of the project
+ROOT_DIR = os.path.abspath("../../")
 DATASET_DIR = os.path.join(ROOT_DIR, 'data/raw/wv2')
 EIGHTCHANNEL_DIR = os.path.join(DATASET_DIR, 'eightchannels')
 TRAIN_DIR = os.path.join(DATASET_DIR, 'train')
@@ -92,7 +68,17 @@ try:
 except:
     FileExistsError
     
+random.seed(4)
 def preprocess():
+    
+    def remove_dir_folders(directory):
+        '''
+        Removes all files and sub-folders in a folder and keeps the folder.
+        '''
+    
+        folderlist = [ f for f in os.listdir(directory)]
+        for f in folderlist:
+            shutil.rmtree(os.path.join(directory,f))
 
     def load_merge_wv2(image_id, source_dir):
         """Load the specified wv2 os/gs image pairs and return a [H,W,8] 
@@ -116,15 +102,15 @@ def preprocess():
         assert stacked_image.ndim == 3
         if -1.7e+308 not in stacked_image:
             skio.imsave(stacked_image_path,stacked_image, plugin='tifffile')
-        else:
+        #else:
             #might try later
             #stacked_image[stacked_image==-1.7e+308]=0
             #skio.imsave(stacked_image_path,stacked_image, plugin='tifffile')
-            print('bad vals')
+            
     # all files, including ones we don't care about
     file_ids_all = next(os.walk(WV2_DIR))[2]
     # all multispectral on and off season tifs
-    image_ids_all = [image_id for image_id in file_ids_all if 'MS' in image_id]
+    image_ids_all = [image_id for image_id in file_ids_all if 'MS' in image_id and '.aux' not in image_id]
     #check for duplicates
     assert len(image_ids_all) == len(set(image_ids_all))
 
@@ -140,12 +126,15 @@ def preprocess():
         load_merge_wv2(imid, WV2_DIR)
 
     image_list = next(os.walk(EIGHTCHANNEL_DIR))[2]
+    
     def move_img_to_folder(filename):
         '''Moves a file with identifier pattern ZA0165086_MS_GS.tif to a 
         folder path ZA0165086/image/ZA0165086_MS_GS.tif
         Also creates a masks folder at ZA0165086/masks'''
-
+        
         folder_name = os.path.join(TRAIN_DIR,filename[:9])
+        if os.path.isdir(folder_name):
+            shutil.rmtree(folder_name)
         os.mkdir(folder_name)
         new_path = os.path.join(folder_name, 'image')
         mask_path = os.path.join(folder_name, 'masks')
@@ -159,7 +148,6 @@ def preprocess():
 
     label_list = next(os.walk(LABELS_DIR))[2]
 
-
     for name in label_list:
         arr = skio.imread(os.path.join(LABELS_DIR,name))
         arr[arr == -1.7e+308]=0
@@ -169,14 +157,15 @@ def preprocess():
         arr = skim.binary_opening(arr, kernel)
         arr=1*arr
         assert arr.ndim == 2
-        skio.imsave(opened_path, 1*arr)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=UserWarning)
+            skio.imsave(opened_path, 1*arr)
 
     label_list = next(os.walk(OPENED_LABELS_DIR))[2]
 
     for name in label_list:
         arr = skio.imread(os.path.join(OPENED_LABELS_DIR,name))
         blob_labels = measure.label(arr, background=0)
-        print(blob_labels.shape, 'blob')
         blob_vals = np.unique(blob_labels)
         for blob_val in blob_vals[blob_vals!=0]:
             labels_copy = blob_labels.copy()
@@ -184,9 +173,10 @@ def preprocess():
             labels_copy[blob_labels==blob_val] = 1
             label_name = name[0:15]+str(blob_val)+'.tif'
             label_path = os.path.join(CONNECTED_COMP_DIR,label_name)
-            print(labels_copy.shape, 'copy')
             assert labels_copy.ndim == 2
-            skio.imsave(label_path, labels_copy)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=UserWarning)
+                skio.imsave(label_path, labels_copy)
 
     def move_mask_to_folder(filename):
         '''Moves a mask with identifier pattern ZA0165086_label_1.tif to a 
@@ -207,31 +197,24 @@ def preprocess():
     id_list = next(os.walk(TRAIN_DIR))[1]
     no_field_list = []
     for fid in id_list:
-        mask_folder = os.path.join('train',fid, 'masks')
+        mask_folder = os.path.join(DATASET_DIR,'train',fid, 'masks')
         if not os.listdir(mask_folder): 
             no_field_list.append(mask_folder)
     no_field_frame = pd.DataFrame(no_field_list)
     no_field_frame.to_csv(os.path.join(DATASET_DIR,'no_field_list.csv'))
-
+    
     for fid in id_list:
-        mask_folder = os.path.join('train',fid, 'masks')
-        im_folder = os.path.join('train',fid, 'image')
+        mask_folder = os.path.join(DATASET_DIR, 'train',fid, 'masks')
+        im_folder = os.path.join(DATASET_DIR, 'train',fid, 'image')
         if not os.listdir(mask_folder): 
             im_path = os.path.join(im_folder, os.listdir(im_folder)[0])
             arr = skio.imread(im_path)
             mask = np.zeros_like(arr[:,:,0])
-            print(mask.shape)
             assert mask.ndim == 2
-            skio.imsave(os.path.join(mask_folder, fid + '_label_0.tif'),mask)
-            
-    def remove_dir_folders(directory):
-        '''
-        Removes all files and sub-folders in a folder and keeps the folder.
-        '''
-    
-        folderlist = [ f for f in os.listdir(directory)]
-        for f in folderlist:
-            shutil.rmtree(os.path.join(directory,f))
+            # ignores warning about low contrast image
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=UserWarning)
+                skio.imsave(os.path.join(mask_folder, fid + '_label_0.tif'),mask)
 
     def train_test_split(train_dir, test_dir, kprop):
         """Takes a sample of folder ids and copies them to a test directory
@@ -239,7 +222,6 @@ def preprocess():
         images and corresponding masks folder."""
 
         remove_dir_folders(test_dir)
-        remove_dir_folders(train_dir)
         sample_list = next(os.walk(train_dir))[1]
         k = round(kprop*len(sample_list))
         test_list = random.sample(sample_list,k)
@@ -260,8 +242,33 @@ def get_arr_channel_mean(channel):
         arr[arr==-1.7e+308]=np.nan
         means.append(np.nanmean(arr[:,:,channel]))
     return np.mean(means)
-        
-        
+
+############################################################
+#  Set model paths and imports
+############################################################
+
+import json
+import datetime
+import numpy as np
+from imgaug import augmenters as iaa
+
+# Import Mask RCNN
+sys.path.append(ROOT_DIR)  # To find local version of the library
+from mrcnn.config import Config
+from mrcnn import utils
+from mrcnn import model as modellib
+from mrcnn import visualize
+
+# Path to trained weights file
+COCO_WEIGHTS_PATH = os.path.join(ROOT_DIR, "models/mask_rcnn_coco.h5")
+
+# Directory to save logs and model checkpoints, if not provided
+# through the command line argument --logs
+DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
+
+# Results directory
+# Save submission files here
+RESULTS_DIR = os.path.join(ROOT_DIR, "results/wv2/")        
 
 ############################################################
 #  Configurations
@@ -292,9 +299,9 @@ class WV2Config(Config):
         # Image meta data length
         # See compose_image_meta() for details
         self.IMAGE_META_SIZE = 1 + 3 + 3 + 4 + 1 + self.NUM_CLASSES
+        self.CHANNELS_NUM = N
     
     # LEARNING_RATE = .0001 
-    CHANNELS_NUM = N
     
     # Image mean (RGBN RGBN) from WV2_MRCNN_PRE.ipynb
     # filling with N values, need to compute mean of each channel
@@ -602,7 +609,7 @@ if __name__ == '__main__':
         description='Mask R-CNN for fields counting and segmentation')
     parser.add_argument("command",
                         metavar="<command>",
-                        help="'preprocess' or 'train' or 'detect'")
+                        help="'preprocess' or 'train' or 'detect. preprocess takes no arguments.'")
     parser.add_argument('--dataset', required=False,
                         metavar="/path/to/dataset/",
                         help='Root directory of the dataset')
