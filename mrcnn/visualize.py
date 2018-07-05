@@ -16,6 +16,7 @@ import colorsys
 
 import numpy as np
 from skimage.measure import find_contours
+from skimage import exposure
 import matplotlib.pyplot as plt
 from matplotlib import patches,  lines
 from matplotlib.patches import Polygon
@@ -48,12 +49,31 @@ def display_images(images, titles=None, cols=4, cmap=None, norm=None,
     plt.figure(figsize=(14, 14 * rows // cols))
     i = 1
     for image, title in zip(images, titles):
-        plt.subplot(rows, cols, i)
-        plt.title(title, fontsize=9)
-        plt.axis('off')
-        plt.imshow(image.astype(np.uint8), cmap=cmap,
+        if i == 1 and image.shape[-1] > 3:
+            def normalize(arr):
+                ''' Function to normalize an input array to 0-1 '''
+                arr_max = arr.max()
+                return arr / arr_max
+            blue = normalize(image[:,:,1])
+            green = normalize(image[:,:,2])
+            red = normalize(image[:,:,4])
+            nir = normalize(image[:,:,6])
+            brg = np.stack([blue, red, green], axis=-1)
+            brg_adap = exposure.equalize_adapthist(brg, clip_limit=0.0055)
+            plt.figure()
+            plt.subplot(rows, cols, i)
+            plt.title(title, fontsize=9)
+            plt.axis('off')
+            plt.imshow(brg_adap, cmap='brg',
                    norm=norm, interpolation=interpolation)
-        i += 1
+            i += 1
+        else:
+            plt.subplot(rows, cols, i)
+            plt.title(title, fontsize=9)
+            plt.axis('off')
+            plt.imshow(image.astype(np.uint8), cmap=cmap,
+                   norm=norm, interpolation=interpolation)
+            i += 1
     plt.show()
 
 

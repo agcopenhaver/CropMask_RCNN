@@ -2,6 +2,8 @@
 samples/
 models/
 notebooks/notebook.tex
+results/
+
 .Rhistory/
 # Byte-compiled / optimized / DLL files
 __pycache__/

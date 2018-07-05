@@ -45,6 +45,7 @@ from skimage import measure
 from skimage import morphology as skim
 import skimage.io as skio
 import warnings
+import pandas as pd
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath("../../")
@@ -56,6 +57,9 @@ WV2_DIR = os.path.join(DATASET_DIR, 'gridded_wv2')
 LABELS_DIR = os.path.join(DATASET_DIR, 'gridded_wv2_labels')
 CONNECTED_COMP_DIR = os.path.join(DATASET_DIR, 'connected_comp_labels')
 OPENED_LABELS_DIR = os.path.join(DATASET_DIR, 'opened_labels')
+# Results directory
+# Save submission files and test/train split csvs here
+RESULTS_DIR = os.path.join(ROOT_DIR, "results/wv2/") 
 try:
     os.mkdir(OPENED_LABELS_DIR)
     os.mkdir(CONNECTED_COMP_DIR)
@@ -193,7 +197,6 @@ def preprocess():
     for mask in mask_list:
         move_mask_to_folder(mask)
 
-    import pandas as pd
     id_list = next(os.walk(TRAIN_DIR))[1]
     no_field_list = []
     for fid in id_list:
@@ -228,7 +231,10 @@ def preprocess():
         for test_sample in test_list:
             shutil.copytree(os.path.join(train_dir,test_sample),os.path.join(test_dir,test_sample))
         train_list = list(set(next(os.walk(train_dir))[1]) - set(test_list))
-        return train_list, test_list
+        train_df = pd.DataFrame({'train': train_list})
+        test_df = pd.DataFrame({'test': test_list})
+        train_df.to_csv(os.path.join(RESULTS_DIR, 'train_ids.csv'))
+        test_df.to_csv(os.path.join(RESULTS_DIR, 'test_ids.csv'))
         
     train_test_split(TRAIN_DIR, TEST_DIR, .1)
     print('preprocessing complete, ready to run model.')
@@ -264,11 +270,7 @@ COCO_WEIGHTS_PATH = os.path.join(ROOT_DIR, "models/mask_rcnn_coco.h5")
 
 # Directory to save logs and model checkpoints, if not provided
 # through the command line argument --logs
-DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
-
-# Results directory
-# Save submission files here
-RESULTS_DIR = os.path.join(ROOT_DIR, "results/wv2/")        
+DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")       
 
 ############################################################
 #  Configurations
@@ -402,9 +404,13 @@ class WV2Dataset(utils.Dataset):
         # Add classes. We have one class.
         # Naming the dataset wv2, and the class agriculture
         self.add_class("wv2", 1, "agriculture")
-
         assert subset in ["train", "test"]
         dataset_dir = os.path.join(dataset_dir, subset)
+        train_ids = pd.read_csv(os.path.join(RESULTS_DIR, 'train_ids.csv'))
+        train_list = list(train_ids['train'])
+        test_ids = pd.read_csv(os.path.join(RESULTS_DIR, 'test_ids.csv'))
+        test_list = list(test_ids['test'])
+        
         if subset == "test":
             image_ids = test_list
         else:
@@ -625,68 +631,68 @@ if __name__ == '__main__':
                         help="Subset of dataset to run prediction on")
     args = parser.parse_args()
 
-if args.command == "preprocess":
-    preprocess()
-    
-else:
-    # Validate arguments
-    if args.command == "train":
-        assert args.dataset, "Argument --dataset is required for training"
-    elif args.command == "detect":
-        assert args.subset, "Provide --subset to run prediction on"
-    
-    print("Weights: ", args.weights)
-    print("Dataset: ", args.dataset)
-    if args.subset:
-        print("Subset: ", args.subset)
-    print("Logs: ", args.logs)
+    if args.command == "preprocess":
+        preprocess()
 
-    # Configurations
-    if args.command == "train":
-        config = WV2Config(8)
     else:
-        config = WV2InferenceConfig(8)
-    config.display()
-    
-    # Create model
-    if args.command == "train":
-        model = modellib.MaskRCNN(mode="training", config=config,
-                                  model_dir=args.logs)
-    else:
-        model = modellib.MaskRCNN(mode="inference", config=config,
-                                  model_dir=args.logs)
+        # Validate arguments
+        if args.command == "train":
+            assert args.dataset, "Argument --dataset is required for training"
+        elif args.command == "detect":
+            assert args.subset, "Provide --subset to run prediction on"
 
-    # Select weights file to load
-    if args.weights.lower() == "coco":
-        weights_path = COCO_WEIGHTS_PATH
-        # Download weights file
-        if not os.path.exists(weights_path):
-            utils.download_trained_weights(weights_path)
-    elif args.weights.lower() == "last":
-        # Find last trained weights
-        weights_path = model.find_last()
-    elif args.weights.lower() == "imagenet":
-        # Start from ImageNet trained weights
-        weights_path = model.get_imagenet_weights()
-    else:
-        weights_path = args.weights
+        print("Weights: ", args.weights)
+        print("Dataset: ", args.dataset)
+        if args.subset:
+            print("Subset: ", args.subset)
+        print("Logs: ", args.logs)
 
-    # Load weights
-    print("Loading weights ", weights_path)
-    if args.weights.lower() == "coco":
-        # Exclude the last layers because they require a matching
-        # number of classes
-        model.load_weights(weights_path, by_name=True, exclude=[
-            "mrcnn_class_logits", "mrcnn_bbox_fc",
-            "mrcnn_bbox", "mrcnn_mask"])
-    else:
-        model.load_weights(weights_path, by_name=True)
+        # Configurations
+        if args.command == "train":
+            config = WV2Config(8)
+        else:
+            config = WV2InferenceConfig(8)
+        config.display()
 
-    # Train or evaluate
-    if args.command == "train":
-        train(model, args.dataset, args.subset)
-    elif args.command == "detect":
-        detect(model, args.dataset, args.subset)
-    else:
-        print("'{}' is not recognized. "
-              "Use 'train' or 'detect'".format(args.command))
+        # Create model
+        if args.command == "train":
+            model = modellib.MaskRCNN(mode="training", config=config,
+                                      model_dir=args.logs)
+        else:
+            model = modellib.MaskRCNN(mode="inference", config=config,
+                                      model_dir=args.logs)
+
+        # Select weights file to load
+        if args.weights.lower() == "coco":
+            weights_path = COCO_WEIGHTS_PATH
+            # Download weights file
+            if not os.path.exists(weights_path):
+                utils.download_trained_weights(weights_path)
+        elif args.weights.lower() == "last":
+            # Find last trained weights
+            weights_path = model.find_last()
+        elif args.weights.lower() == "imagenet":
+            # Start from ImageNet trained weights
+            weights_path = model.get_imagenet_weights()
+        else:
+            weights_path = args.weights
+
+        # Load weights
+        print("Loading weights ", weights_path)
+        if args.weights.lower() == "coco":
+            # Exclude the last layers because they require a matching
+            # number of classes
+            model.load_weights(weights_path, by_name=True, exclude=[
+                "mrcnn_class_logits", "mrcnn_bbox_fc",
+                "mrcnn_bbox", "mrcnn_mask"])
+        else:
+            model.load_weights(weights_path, by_name=True)
+
+        # Train or evaluate
+        if args.command == "train":
+            train(model, args.dataset, args.subset)
+        elif args.command == "detect":
+            detect(model, args.dataset, args.subset)
+        else:
+            print("'{}' is not recognized. "
+                  "Use 'train' or 'detect'".format(args.command))
