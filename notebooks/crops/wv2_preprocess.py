@@ -9,7 +9,7 @@ import warnings
 import pandas as pd
 import numpy as np
 
-
+ROOT_DIR = os.path.abspath("../../")
 DATASET_DIR = os.path.join(ROOT_DIR, 'data/raw/wv2')
 EIGHTCHANNEL_DIR = os.path.join(DATASET_DIR, 'eightchannels')
 TRAIN_DIR = os.path.join(DATASET_DIR, 'train')

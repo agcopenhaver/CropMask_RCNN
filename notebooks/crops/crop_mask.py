@@ -35,8 +35,6 @@ if __name__ == '__main__':
     # Agg backend runs without a display
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
-    
-import wv2_preprocess
 
 ############################################################
 #  Set model paths and imports
@@ -46,6 +44,7 @@ import os
 # Root directory of the project
 ROOT_DIR = os.path.abspath("../../")
 sys.path.append(ROOT_DIR)  # To find local version of the library
+import wv2_preprocess
 import wv2_config
 import wv2_dataset
 import datetime
