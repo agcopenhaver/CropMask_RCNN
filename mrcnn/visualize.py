@@ -33,6 +33,18 @@ from mrcnn import utils
 ############################################################
 #  Visualization
 ############################################################
+def normalize(arr):
+    ''' Function to normalize an input array to 0-1 '''
+    arr_max = arr.max()
+    return arr / arr_max
+
+def reorder_to_brg(image):
+    '''reorders wv2 bands to blue, red, green for imshow'''
+    blue = normalize(image[:,:,1])
+    green = normalize(image[:,:,2])
+    red = normalize(image[:,:,4])
+    nir = normalize(image[:,:,6])
+    return np.stack([blue, red, green], axis=-1)
 
 def display_images(images, titles=None, cols=4, cmap=None, norm=None,
                    interpolation=None):
@@ -50,15 +62,7 @@ def display_images(images, titles=None, cols=4, cmap=None, norm=None,
     i = 1
     for image, title in zip(images, titles):
         if i == 1 and image.shape[-1] > 3:
-            def normalize(arr):
-                ''' Function to normalize an input array to 0-1 '''
-                arr_max = arr.max()
-                return arr / arr_max
-            blue = normalize(image[:,:,1])
-            green = normalize(image[:,:,2])
-            red = normalize(image[:,:,4])
-            nir = normalize(image[:,:,6])
-            brg = np.stack([blue, red, green], axis=-1)
+            brg = reorder_to_brg(image)
             brg_adap = exposure.equalize_adapthist(brg, clip_limit=0.0055)
             plt.figure()
             plt.subplot(rows, cols, i)
@@ -184,7 +188,9 @@ def display_instances(image, boxes, masks, class_ids, class_names,
             verts = np.fliplr(verts) - 1
             p = Polygon(verts, facecolor="none", edgecolor=color)
             ax.add_patch(p)
-    ax.imshow(masked_image.astype(np.uint8))
+    brg = reorder_to_brg(image)
+    brg_adap = exposure.equalize_adapthist(brg, clip_limit=0.0055)
+    ax.imshow(brg_adap) # added band reordering for wv2 and adaptive stretch
     if auto_show:
         plt.show()
 
