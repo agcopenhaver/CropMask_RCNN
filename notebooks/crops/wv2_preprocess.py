@@ -171,15 +171,8 @@ def preprocess():
     for fid in id_list:
         mask_folder = os.path.join(DATASET_DIR, 'train',fid, 'masks')
         im_folder = os.path.join(DATASET_DIR, 'train',fid, 'image')
-        if not os.listdir(mask_folder): 
-            im_path = os.path.join(im_folder, os.listdir(im_folder)[0])
-            arr = skio.imread(im_path)
-            mask = np.zeros_like(arr[:,:,0])
-            assert mask.ndim == 2
-            # ignores warning about low contrast image
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", category=UserWarning)
-                skio.imsave(os.path.join(mask_folder, fid + '_label_0.tif'),mask)
+        if not os.listdir(mask_folder):
+            shutil.rmtree(os.path.join(DATASET_DIR, 'train', fid))
 
     def train_test_split(train_dir, test_dir, kprop):
         """Takes a sample of folder ids and copies them to a test directory
