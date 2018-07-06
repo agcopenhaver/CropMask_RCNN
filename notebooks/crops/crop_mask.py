@@ -238,7 +238,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.command == "preprocess":
-        preprocess()
+        wv2_preprocess.preprocess()
 
     else:
         # Validate arguments
