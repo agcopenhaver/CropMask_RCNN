@@ -284,8 +284,13 @@ def draw_rois(image, rois, refined_rois, mask, class_ids, class_names, limit=10)
             m = utils.unmold_mask(mask[id], rois[id]
                                   [:4].astype(np.int32), image.shape)
             masked_image = apply_mask(masked_image, m, color)
-
-    ax.imshow(masked_image)
+    
+    if image.shape[-1] > 3: # added for wv2
+        brg = reorder_to_brg(image)
+        brg_adap = exposure.equalize_adapthist(brg, clip_limit=0.0055)
+        ax.imshow(brg_adap)
+    else:
+        ax.imshow(masked_image)
 
     # Print stats
     print("Positive ROIs: ", class_ids[class_ids > 0].shape[0])
@@ -299,6 +304,8 @@ def draw_box(image, box, color):
     """Draw 3-pixel width bounding boxes on the given image array.
     color: list of 3 int values for RGB.
     """
+    if image.shape[-1] > 3: # added for wv2
+        image = reorder_to_brg(image)
     y1, x1, y2, x2 = box
     image[y1:y1 + 2, x1:x2] = color
     image[y2:y2 + 2, x1:x2] = color
@@ -484,7 +491,12 @@ def draw_boxes(image, boxes=None, refined_boxes=None,
                 verts = np.fliplr(verts) - 1
                 p = Polygon(verts, facecolor="none", edgecolor=color)
                 ax.add_patch(p)
-    ax.imshow(masked_image.astype(np.uint8))
+    if image.shape[-1] > 3: # added for wv2
+        brg = reorder_to_brg(image)
+        brg_adap = exposure.equalize_adapthist(brg, clip_limit=0.0055)
+        ax.imshow(brg_adap)
+    else:
+        ax.imshow(masked_image.astype(np.uint8))
 
 
 def display_table(table):

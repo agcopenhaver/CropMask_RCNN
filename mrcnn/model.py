@@ -1217,7 +1217,6 @@ def load_image_gt(dataset, config, image_id, augment=False, augmentation=None,
     # Load image and mask
     image = dataset.load_image(image_id)
     mask, class_ids = dataset.load_mask(image_id)
-    print(mask.shape, '1220')
     original_shape = image.shape
     image, window, scale, padding, crop = utils.resize_image(
         image,
@@ -1226,7 +1225,6 @@ def load_image_gt(dataset, config, image_id, augment=False, augmentation=None,
         max_dim=config.IMAGE_MAX_DIM,
         mode=config.IMAGE_RESIZE_MODE)
     mask = utils.resize_mask(mask, scale, padding, crop)
-    print(mask.shape, '1229')
     # Random horizontal flips.
     # TODO: will be removed in a future update in favor of augmentation
     if augment:
