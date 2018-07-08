@@ -3,6 +3,7 @@ samples/
 models/
 notebooks/notebook.tex
 results/
+logs/
 
 .Rhistory/
 # Byte-compiled / optimized / DLL files

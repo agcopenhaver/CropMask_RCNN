@@ -68,12 +68,12 @@ DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 def train(model, dataset_dir, subset):
     """Train the model."""
     # Training dataset.
-    dataset_train = WV2Dataset()
+    dataset_train = wv2_dataset.WV2Dataset()
     dataset_train.load_wv2(dataset_dir, "train")
     dataset_train.prepare()
 
     # Validation dataset
-    dataset_val = WV2Dataset()
+    dataset_val = wv2_dataset.WV2Dataset()
     dataset_val.load_wv2(dataset_dir, "test")
     dataset_val.prepare()
 
@@ -179,7 +179,7 @@ def detect(model, dataset_dir, subset):
     os.makedirs(submit_dir)
 
     # Read dataset
-    dataset = WV2Dataset(8)
+    dataset = wv2_dataset.WV2Dataset(8)
     dataset.load_wv2(dataset_dir, subset)
     dataset.prepare()
     # Load over images
@@ -255,9 +255,9 @@ if __name__ == '__main__':
 
         # Configurations
         if args.command == "train":
-            config = WV2Config(8)
+            config = wv2_config.WV2Config(8)
         else:
-            config = WV2InferenceConfig(8)
+            config = wv2_config.WV2InferenceConfig(8)
         config.display()
 
         # Create model
@@ -267,35 +267,37 @@ if __name__ == '__main__':
         else:
             model = modellib.MaskRCNN(mode="inference", config=config,
                                       model_dir=args.logs)
+        if args.weights is not None:
+            # Select weights file to load
+            if args.weights.lower() == "coco":
+                weights_path = COCO_WEIGHTS_PATH
+                # Download weights file
+                if not os.path.exists(weights_path):
+                    utils.download_trained_weights(weights_path)
+            elif args.weights.lower() == "last":
+                # Find last trained weights
+                weights_path = model.find_last()
+            elif args.weights.lower() == "imagenet":
+                # Start from ImageNet trained weights
+                weights_path = model.get_imagenet_weights()
+            else:
+                weights_path = args.weights
 
-        # Select weights file to load
-        if args.weights.lower() == "coco":
-            weights_path = COCO_WEIGHTS_PATH
-            # Download weights file
-            if not os.path.exists(weights_path):
-                utils.download_trained_weights(weights_path)
-        elif args.weights.lower() == "last":
-            # Find last trained weights
-            weights_path = model.find_last()
-        elif args.weights.lower() == "imagenet":
-            # Start from ImageNet trained weights
-            weights_path = model.get_imagenet_weights()
-        else:
-            weights_path = args.weights
-
-        # Load weights
-        print("Loading weights ", weights_path)
-        if args.weights.lower() == "coco":
-            # Exclude the last layers because they require a matching
-            # number of classes
-            model.load_weights(weights_path, by_name=True, exclude=[
-                "mrcnn_class_logits", "mrcnn_bbox_fc",
-                "mrcnn_bbox", "mrcnn_mask"])
-        else:
-            model.load_weights(weights_path, by_name=True)
+            # Load weights
+            print("Loading weights ", weights_path)
+            if args.weights.lower() == "coco":
+                # Exclude the last layers because they require a matching
+                # number of classes
+                model.load_weights(weights_path, by_name=True, exclude=[
+                    "mrcnn_class_logits", "mrcnn_bbox_fc",
+                    "mrcnn_bbox", "mrcnn_mask"])
+            else:
+                model.load_weights(weights_path, by_name=True)
 
         # Train or evaluate
         if args.command == "train":
+            os.chdir(ROOT_DIR)
+            print(os.getcwd(), 'current working dir')
             train(model, args.dataset, args.subset)
         elif args.command == "detect":
             detect(model, args.dataset, args.subset)

@@ -44,7 +44,7 @@ class WV2Config(Config):
 
     # Batch size is 4 (GPUs * images/GPU).
     # New parralel_model.py allows for multi-gpu
-    GPU_COUNT = 2
+    GPU_COUNT = 1
     IMAGES_PER_GPU = 4
 
     # Number of classes (including background)

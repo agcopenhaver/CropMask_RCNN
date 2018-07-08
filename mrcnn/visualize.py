@@ -61,7 +61,7 @@ def display_images(images, titles=None, cols=4, cmap=None, norm=None,
     plt.figure(figsize=(14, 14 * rows // cols))
     i = 1
     for image, title in zip(images, titles):
-        if i == 1 and image.shape[-1] > 3:
+        if i == 1 and image.shape[-1] == 8: #added for wv2
             brg = reorder_to_brg(image)
             brg_adap = exposure.equalize_adapthist(brg, clip_limit=0.0055)
             plt.figure()
@@ -285,7 +285,7 @@ def draw_rois(image, rois, refined_rois, mask, class_ids, class_names, limit=10)
                                   [:4].astype(np.int32), image.shape)
             masked_image = apply_mask(masked_image, m, color)
     
-    if image.shape[-1] > 3: # added for wv2
+    if image.shape[-1] == 8: # added for wv2
         brg = reorder_to_brg(image)
         brg_adap = exposure.equalize_adapthist(brg, clip_limit=0.0055)
         ax.imshow(brg_adap)
@@ -304,7 +304,7 @@ def draw_box(image, box, color):
     """Draw 3-pixel width bounding boxes on the given image array.
     color: list of 3 int values for RGB.
     """
-    if image.shape[-1] > 3: # added for wv2
+    if image.shape[-1] == 8: # added for wv2
         image = reorder_to_brg(image)
     y1, x1, y2, x2 = box
     image[y1:y1 + 2, x1:x2] = color
@@ -491,7 +491,7 @@ def draw_boxes(image, boxes=None, refined_boxes=None,
                 verts = np.fliplr(verts) - 1
                 p = Polygon(verts, facecolor="none", edgecolor=color)
                 ax.add_patch(p)
-    if image.shape[-1] > 3: # added for wv2
+    if image.shape[-1] == 8: # added for wv2
         brg = reorder_to_brg(image)
         brg_adap = exposure.equalize_adapthist(brg, clip_limit=0.0055)
         ax.imshow(brg_adap)
