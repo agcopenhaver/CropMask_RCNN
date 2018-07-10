@@ -179,7 +179,7 @@ def detect(model, dataset_dir, subset):
     os.makedirs(submit_dir)
 
     # Read dataset
-    dataset = wv2_dataset.WV2Dataset(8)
+    dataset = wv2_dataset.WV2Dataset(3)
     dataset.load_wv2(dataset_dir, subset)
     dataset.prepare()
     # Load over images
@@ -255,9 +255,9 @@ if __name__ == '__main__':
 
         # Configurations
         if args.command == "train":
-            config = wv2_config.WV2Config(8)
+            config = wv2_config.WV2Config(3)
         else:
-            config = wv2_config.WV2InferenceConfig(8)
+            config = wv2_config.WV2InferenceConfig(3)
         config.display()
 
         # Create model

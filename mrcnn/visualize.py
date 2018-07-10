@@ -46,6 +46,20 @@ def reorder_to_brg(image):
     nir = normalize(image[:,:,6])
     return np.stack([blue, red, green], axis=-1)
 
+def percentile_rescale(arr):
+    '''
+    Rescales and applies other exposure functions to improve image vis. 
+    http://scikit-image.org/docs/dev/api/skimage.exposure.html#skimage.exposure.rescale_intensity
+    '''
+    rescaled_arr = np.zeros_like(arr)
+    for i in range(0,arr.shape[-1]):
+        val_range = (np.percentile(arr[:,:,i], 1), np.percentile(arr[:,:,i], 99))
+        rescaled_channel = exposure.rescale_intensity(arr[:,:,i], val_range)
+        rescaled_arr[:,:,i] = rescaled_channel
+#     rescaled_arr= exposure.adjust_gamma(rescaled_arr, gamma=1) #adjust from 1 either way
+#     rescaled_arr= exposure.adjust_sigmoid(rescaled_arr, cutoff=.50) #adjust from .5 either way 
+    return rescaled_arr
+
 def display_images(images, titles=None, cols=4, cmap=None, norm=None,
                    interpolation=None):
     """Display the given set of images, optionally with titles.
@@ -71,11 +85,21 @@ def display_images(images, titles=None, cols=4, cmap=None, norm=None,
             plt.imshow(brg_adap, cmap='brg',
                    norm=norm, interpolation=interpolation)
             i += 1
+        elif i == 1 and image.shape[-1]==3: #added for RGB satellite imagery, tested with wv2
+            image[image < 0] = 0
+            image = percentile_rescale(image)
+            plt.figure()
+            plt.subplot(rows, cols, i)
+            plt.title(title, fontsize=9)
+            plt.axis('off')
+            plt.imshow(image, cmap='brg',
+                   norm=norm, interpolation=interpolation)
+            i += 1
         else:
             plt.subplot(rows, cols, i)
             plt.title(title, fontsize=9)
             plt.axis('off')
-            plt.imshow(image.astype(np.uint8), cmap=cmap,
+            plt.imshow(image, cmap=cmap,
                    norm=norm, interpolation=interpolation)
             i += 1
     plt.show()
@@ -188,9 +212,14 @@ def display_instances(image, boxes, masks, class_ids, class_names,
             verts = np.fliplr(verts) - 1
             p = Polygon(verts, facecolor="none", edgecolor=color)
             ax.add_patch(p)
-    brg = reorder_to_brg(image)
-    brg_adap = exposure.equalize_adapthist(brg, clip_limit=0.0055)
-    ax.imshow(brg_adap) # added band reordering for wv2 and adaptive stretch
+    if image.shape[-1] == 8: # added for wv2 using RGBNRGB for two seasons        
+        brg = reorder_to_brg(image)
+        brg_adap = exposure.equalize_adapthist(brg, clip_limit=0.0055)
+        ax.imshow(brg_adap) # added band reordering for wv2 and adaptive stretch
+    else:
+        image[image < 0] = 0
+        image = percentile_rescale(image)
+        ax.imshow(image, cmap='brg')
     if auto_show:
         plt.show()
 
@@ -334,7 +363,7 @@ def display_top_masks(image, mask, class_ids, class_names, limit=4):
         m = np.sum(m * np.arange(1, m.shape[-1] + 1), -1)
         to_display.append(m)
         titles.append(class_names[class_id] if class_id != -1 else "-")
-    display_images(to_display, titles=titles, cols=limit + 1, cmap="Blues_r")
+    display_images(to_display, titles=titles, cols=limit + 1, cmap="brg")
 
 
 def plot_precision_recall(AP, precisions, recalls):

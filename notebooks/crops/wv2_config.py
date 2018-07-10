@@ -32,12 +32,12 @@ class WV2Config(Config):
         self.IMAGE_META_SIZE = 1 + 3 + 3 + 4 + 1 + self.NUM_CLASSES
         self.CHANNELS_NUM = N
     
-    # LEARNING_RATE = .0001 
+    LEARNING_RATE = .0001 
     
     # Image mean (RGBN RGBN) from WV2_MRCNN_PRE.ipynb
     # filling with N values, need to compute mean of each channel
     # values are for gridded wv2 no partial grids
-    MEAN_PIXEL = np.array([259.6, 347.0, 259.8, 416.3, 228.23, 313.4, 187.5, 562.9])
+    MEAN_PIXEL = np.array([173.768833372328, 255.41574949688382, 181.65521483951144])
     
     # Give the configuration a recognizable name
     NAME = "wv2-gridded-no-partial"
@@ -45,7 +45,7 @@ class WV2Config(Config):
     # Batch size is 4 (GPUs * images/GPU).
     # New parralel_model.py allows for multi-gpu
     GPU_COUNT = 1
-    IMAGES_PER_GPU = 4
+    IMAGES_PER_GPU = 2
 
     # Number of classes (including background)
     NUM_CLASSES = 1 + 1  # background + ag
@@ -55,14 +55,14 @@ class WV2Config(Config):
     # Exception("Image size must be dividable by 2 at least 6 times "
     #     "to avoid fractions when downscaling and upscaling."
     #    "For example, use 256, 320, 384, 448, 512, ... etc. "
-    IMAGE_RESIZE_MODE = "crop"
-    IMAGE_MIN_DIM = 256
-    IMAGE_MAX_DIM = 256
+    IMAGE_RESIZE_MODE = "square"
+    IMAGE_MIN_DIM = 1024
+    IMAGE_MAX_DIM = 1024
 
     # Use smaller anchors because our image and objects are small.
     # Setting Large upper scale since some fields take up nearly 
     # whole image
-    RPN_ANCHOR_SCALES = (16, 32, 64, 128, 180)  # anchor side in pixels
+    RPN_ANCHOR_SCALES = (100, 150, 250, 350, 512)  # anchor side in pixels, determined using inspect_crop_data.ipynb
 
     # Reduce training ROIs per image because the images are small and have
     # few objects. Aim to allow ROI sampling to pick 33% positive ROIs.
@@ -72,7 +72,7 @@ class WV2Config(Config):
     STEPS_PER_EPOCH = 1000
     
     #reduces the max number of field instances
-    MAX_GT_INSTANCES = 28 # determined using inspect_crop_data.ipynb
+    MAX_GT_INSTANCES = 7 # determined using inspect_crop_data.ipynb
 
     # use small validation steps since the epoch is small
     VALIDATION_STEPS = 100
@@ -86,7 +86,7 @@ class WV2Config(Config):
     
     # If enabled, resizes instance masks to a smaller size to reduce
     # memory load. Recommended when using high-resolution images.
-    USE_MINI_MASK = False
+    USE_MINI_MASK = True
     MINI_MASK_SHAPE = (56, 56)  # (height, width) of the mini-mask
     
 

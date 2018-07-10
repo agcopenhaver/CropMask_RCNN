@@ -25,7 +25,6 @@ class WV2Dataset(utils.Dataset):
         # Load image
         image = skio.imread(self.image_info[image_id]['path'])
     
-        assert image.shape[-1] == 8
         assert image.ndim == 3
     
         return image
@@ -58,7 +57,7 @@ class WV2Dataset(utils.Dataset):
             self.add_image(
                 "wv2",
                 image_id=image_id,
-                path=os.path.join(dataset_dir, image_id, "image/{}.tif".format(image_id+'_OSGS_ms')))
+                path=os.path.join(dataset_dir, str(image_id), "image/{}.tif".format(str(image_id))))
     
     def load_mask(self, image_id):
         """Generate instance masks for an image.
